@@ -15,3 +15,4 @@ uploads/
 ps47_brain_ai_orchestration.zip
 tools/
 voice_agent/.venv/
+voice_agent/models/tts/*.onnx
