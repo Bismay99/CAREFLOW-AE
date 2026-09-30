@@ -106,7 +106,7 @@ function LoginFormContent() {
     setFormError(null);
     const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
     const cleanUrl = baseUrl.replace(/\/$/, "");
-    window.location.assign(`${cleanUrl}/auth/google`);
+    window.location.assign(`${cleanUrl}/auth/google?role=${mode}`);
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -357,7 +357,7 @@ function LoginFormContent() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder={mode === "patient" ? "patient@email.com" : "doctor@hospital.org"}
+                  placeholder={mode === "patient" ? "patient@hospital.com" : "doctor@hospital.com"}
                   className="w-full text-xs p-3 rounded-md border border-[var(--ink-200)] bg-[var(--bg-surface)] text-[var(--ink-900)] placeholder:text-[var(--ink-400)] focus:outline-none focus:border-[var(--clinical)] focus:ring-1 focus:ring-[var(--clinical)] transition-colors"
                 />
               </div>
@@ -430,7 +430,7 @@ function LoginFormContent() {
               {mode === "patient" ? (
                 <p className="text-xs text-[var(--ink-500)]">
                   New patient?{" "}
-                  <Link href="/patient/onboarding" className="font-semibold text-[var(--clinical)] hover:text-[var(--clinical-dark)] hover:underline">
+                  <Link href="/register" className="font-semibold text-[var(--clinical)] hover:text-[var(--clinical-dark)] hover:underline">
                     Register an account
                   </Link>
                 </p>

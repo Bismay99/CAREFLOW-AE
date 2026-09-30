@@ -15,3 +15,14 @@ export async function getMe(tokenOverride?: string): Promise<UserResponse> {
 export async function exchangeGoogleTicket(ticket: string): Promise<TokenResponse> {
   return apiPost<TokenResponse>("/auth/google/exchange", { ticket });
 }
+
+/** POST /auth/register */
+export async function register(payload: {
+  email: string;
+  password: string;
+  full_name: string;
+  role: "patient" | "doctor" | "admin";
+  hospital_affiliation?: string | null;
+}): Promise<UserResponse> {
+  return apiPost<UserResponse>("/auth/register", payload);
+}

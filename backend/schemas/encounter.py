@@ -5,7 +5,8 @@ Pydantic schemas for encounter endpoints.
 """
 
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, Union
+from datetime import datetime
 from backend.models.encounter import EncounterStatus
 
 
@@ -15,15 +16,15 @@ class EncounterCreate(BaseModel):
     In production, encounters are created by the hospital registration system.
     """
     opd_department: Optional[str] = None
-    scheduled_at: Optional[str] = None   # ISO datetime string
+    scheduled_at: Optional[Union[datetime, str]] = None   # ISO datetime string or datetime
 
 
 class EncounterResponse(BaseModel):
     id: str
     patient_id: str
-    doctor_user_id: Optional[str]
+    doctor_user_id: Optional[str] = None
     queue_status: str
-    opd_department: Optional[str]
-    scheduled_at: Optional[str] = None
+    opd_department: Optional[str] = None
+    scheduled_at: Optional[Union[datetime, str]] = None
 
     model_config = {"from_attributes": True}

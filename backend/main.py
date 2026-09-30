@@ -37,6 +37,9 @@ async def lifespan(app: FastAPI):
     if settings.app_env in ("development", "test"):
         try:
             Base.metadata.create_all(bind=get_engine())
+            if settings.app_env == "development":
+                from backend.seed import seed_demo_data
+                seed_demo_data()
         except Exception:
             pass  # DB not reachable — Alembic handles production migrations
 

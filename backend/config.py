@@ -15,7 +15,7 @@ load_dotenv()
 
 class Settings(BaseSettings):
     # Database
-    database_url: str = "postgresql://ps47user:ps47pass@localhost:5432/ps47db"
+    database_url: str = "sqlite:///./careflow.db"
 
     # JWT
     jwt_secret_key: str = "dev-only-secret-change-in-production"

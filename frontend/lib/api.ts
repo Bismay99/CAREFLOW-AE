@@ -30,8 +30,7 @@ export class ApiTimeoutError extends Error {
 const TOKEN_KEY = "ps47_token";
 
 function getBaseUrl(): string {
-  const url = process.env.NEXT_PUBLIC_API_URL;
-  if (!url) throw new Error("NEXT_PUBLIC_API_URL is not set. Add it to frontend/.env.local");
+  const url = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
   return url.replace(/\/$/, "");
 }
 
