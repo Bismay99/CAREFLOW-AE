@@ -254,16 +254,31 @@ def get_asr_client(provider: Optional[str] = None) -> Any:
 
 def _is_transient_asr_error(exc: Exception) -> bool:
     """
-    Returns True only for transient server overload or rate limiting errors (503, 429).
-    Never retries permanent client errors (400, 401, 403, 404, invalid audio).
+    Returns True for transient server overload (503, 429) or transient network drops.
+    Never retries permanent client errors (400, 401, 403, 404, 422, invalid audio).
     """
     status_code = getattr(exc, "status_code", None) or getattr(exc, "code", None)
     if status_code in (503, 429):
         return True
+    if status_code in (400, 401, 403, 404, 422):
+        return False
+
+    if isinstance(exc, (ConnectionResetError, ConnectionAbortedError, BrokenPipeError, TimeoutError)):
+        return True
+
     msg = str(exc).upper()
-    return ("503" in msg or "429" in msg) and (
-        "UNAVAILABLE" in msg or "HIGH DEMAND" in msg or "RESOURCE_EXHAUSTED" in msg or "TEMPORARY" in msg
+    # Permanent errors check
+    if any(p in msg for p in ("INVALID_ARGUMENT", "PERMISSION_DENIED", "UNAUTHENTICATED", "NOT_FOUND")):
+        return False
+
+    transient_indicators = (
+        "503", "429", "UNAVAILABLE", "RESOURCE_EXHAUSTED", "HIGH DEMAND", "TEMPORARY",
+        "TIMEOUT", "TIMED OUT", "CONNECTION RESET", "CONNECTION CLOSED", "CONNECTION ABORTED",
+        "REMOTE DISCONNECTED", "REMOTEPROTOCOLERROR", "EOF OCCURRED", "UNEXPECTED_EOF",
+        "BROKEN PIPE", "NETWORK IS UNREACHABLE", "SSL: UNEXPECTED_EOF_WHILE_READING"
     )
+    return any(ind in msg for ind in transient_indicators)
+
 
 
 # ---------------------------------------------------------------------------
@@ -312,8 +327,8 @@ def _call_gemini_asr(
         ) if lang_codes else None,
     )
 
-    max_retries = 3
-    backoff_delays = [2.0, 4.0, 8.0]
+    max_retries = 2
+    backoff_delays = [0.5, 1.5]
 
     for attempt in range(max_retries + 1):
         try:

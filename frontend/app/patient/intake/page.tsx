@@ -30,7 +30,7 @@ import { CareVoiceLiveKitConversation } from "@/components/patient/CareVoiceLive
 import { useIntakeStore } from "@/stores/intake.store";
 import { getMyEncounters } from "@/services/patient.service";
 import { startSession, submitTurn, submitVoiceTurn, submitIntake } from "@/services/intake.service";
-import { ApiError } from "@/lib/api";
+import { ApiError, ApiTimeoutError } from "@/lib/api";
 import type { EncounterResponse } from "@/types/patient";
 
 /** Schema picker for MVP — uses the two schemas defined in the backend. */
@@ -56,6 +56,9 @@ const CLINICAL_STAGES = [
 ];
 
 function mapVoiceError(err: unknown): string {
+  if (err instanceof ApiTimeoutError) {
+    return "The voice request took longer than expected to process. Tap 'Retry Sending Audio' to try again without re-speaking.";
+  }
   if (err instanceof ApiError) {
     switch (err.status) {
       case 401:
@@ -69,20 +72,24 @@ function mapVoiceError(err: unknown): string {
       case 413:
         return "Your recording is too large. Please record a shorter answer.";
       case 422:
-        return "The recording could not be processed. Please try again.";
+        return err.detail || "The recording could not be processed. Please speak clearly and try again.";
       case 429:
-        return "The service is temporarily busy. Please try again in a moment.";
+        return "Voice intake is temporarily experiencing high traffic. Please wait a moment and tap 'Retry Sending Audio'.";
+      case 503:
+        return "Voice transcription service temporarily unavailable. Tap 'Retry Sending Audio' or type your response.";
+      case 504:
+        return "Voice processing timed out on the hospital service. Tap 'Retry Sending Audio'.";
       default:
         if (err.status >= 500) {
-          return "We couldn't process your answer right now. Please try again.";
+          return "The voice service experienced a temporary error. Tap 'Retry Sending Audio'.";
         }
         return err.detail || "Failed to process audio.";
     }
   }
   if (err instanceof TypeError && (err as TypeError).message.includes("fetch")) {
-    return "Unable to connect to the server. Please check your internet connection.";
+    return "Unable to connect to the hospital server. Please check your internet connection and tap 'Retry Sending Audio'.";
   }
-  return "An unexpected error occurred while processing your voice answer.";
+  return "An unexpected error occurred while processing your voice answer. Tap 'Retry Sending Audio' to try again.";
 }
 
 export default function PatientIntakePage() {
@@ -90,6 +97,8 @@ export default function PatientIntakePage() {
   const searchParams = useSearchParams();
   const intake = useIntakeStore();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const lastRecordedAudioRef = useRef<{ blob: Blob; mimeType: string; extension: string } | null>(null);
+  const inFlightLockRef = useRef<boolean>(false);
 
   // Local state for setup form
   const [encounters, setEncounters] = useState<EncounterResponse[]>([]);
@@ -227,21 +236,39 @@ export default function PatientIntakePage() {
   // ── Submit voice answer handler ────────────────────────────────────
   async function handleVoiceRecorded(audioBlob: Blob, mimeType: string, extension: string) {
     if (!intake.sessionId || !intake.encounterId) {
-      intake.setVoiceError("No active consultation session found. Please refresh or restart intake.");
+      intake.setVoiceErrorWithRetry("No active consultation session found. Please refresh or restart intake.", false);
       return;
     }
 
-    if (isSubmitting || intake.isVoiceUploading) {
+    // Duplicate submission protection: lock during in-flight turn
+    if (inFlightLockRef.current || isSubmitting || intake.isVoiceUploading) {
+      console.warn("[VoiceIntake] Submission blocked: turn request already in flight.");
       return;
     }
+
+    inFlightLockRef.current = true;
+    lastRecordedAudioRef.current = { blob: audioBlob, mimeType, extension };
 
     const questionAsked = intake.currentQuestion || "";
     const fieldAnswered = intake.currentFieldName || "";
 
     setIsSubmitting(true);
-    intake.setVoiceUploading(true);
     intake.setError(null);
     intake.setVoiceError(null);
+    intake.setVoiceLifecycle("UPLOADING");
+
+    // Dynamic progressive feedback so the patient is never left waiting silently
+    const transcribingTimer = setTimeout(() => {
+      if (inFlightLockRef.current) {
+        intake.setVoiceLifecycle("TRANSCRIBING");
+      }
+    }, 600);
+
+    const processingTimer = setTimeout(() => {
+      if (inFlightLockRef.current) {
+        intake.setVoiceLifecycle("PROCESSING");
+      }
+    }, 3500);
 
     try {
       const resp = await submitVoiceTurn({
@@ -251,17 +278,42 @@ export default function PatientIntakePage() {
         language: intake.language || undefined,
         audio_file: audioBlob,
         audio_filename: `turn_${intake.turnNumber + 1}.${extension}`,
+        timeoutMs: 25000,
       });
 
-      const transcript = resp.raw_transcript || "(Voice recorded)";
+      clearTimeout(transcribingTimer);
+      clearTimeout(processingTimer);
+      intake.setVoiceLifecycle("RESPONDING");
+
+      const transcript = (resp.raw_transcript || "").trim();
+      if (!transcript) {
+        // Safe silence handling: patient didn't speak or mic captured silence
+        intake.setVoiceErrorWithRetry(
+          "We couldn't hear any speech in your recording. Please speak clearly into your microphone or type your answer.",
+          false
+        );
+        lastRecordedAudioRef.current = null;
+        return;
+      }
+
       intake.applyTurnResponse(transcript, questionAsked, fieldAnswered, resp, true);
+      lastRecordedAudioRef.current = null; // Clear cached audio on success
     } catch (err) {
+      clearTimeout(transcribingTimer);
+      clearTimeout(processingTimer);
       const userMessage = mapVoiceError(err);
-      intake.setVoiceError(userMessage);
+      intake.setVoiceErrorWithRetry(userMessage, true);
     } finally {
       setIsSubmitting(false);
-      intake.setVoiceUploading(false);
+      inFlightLockRef.current = false;
     }
+  }
+
+  // Recoverable retry handler using the cached audio blob
+  async function handleRetryVoice() {
+    if (!lastRecordedAudioRef.current) return;
+    const { blob, mimeType, extension } = lastRecordedAudioRef.current;
+    await handleVoiceRecorded(blob, mimeType, extension);
   }
 
   // ── CareVoice integration handlers ─────────────────────────────────
@@ -876,10 +928,16 @@ export default function PatientIntakePage() {
                   <div className="w-full">
                     <VoiceRecorder
                       onRecorded={handleVoiceRecorded}
-                      disabled={isSubmitting || !!answerText.trim()}
+                      disabled={isSubmitting || inFlightLockRef.current || !!answerText.trim()}
                       isUploading={intake.isVoiceUploading}
+                      voiceState={intake.voiceLifecycle}
                       uploadError={intake.voiceError}
-                      onClearError={() => intake.setVoiceError(null)}
+                      onClearError={() => {
+                        intake.setVoiceError(null);
+                        lastRecordedAudioRef.current = null;
+                      }}
+                      onRetry={handleRetryVoice}
+                      hasAudioToRetry={!!lastRecordedAudioRef.current}
                     />
                   </div>
                   <div className="text-center pt-1 border-t border-[var(--ink-200)]">

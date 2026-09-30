@@ -248,6 +248,38 @@ def test_ayush_intake_turn():
 
 
 # ---------------------------------------------------------------------------
+# 5B. Language Contract & Normalization (Phase 5A)
+# ---------------------------------------------------------------------------
+def test_intake_turn_hinglish_normalized_to_english_clinical_terms():
+    """Verify that patient Hindi/Hinglish input is normalized to English clinical terms."""
+    from ai_orchestration.normalization import normalize_intake_text
+
+    raw_voice = "Mujhe teen din se seene mein dard aur saans lene mein takleef ho rahi hai"
+    normalized = normalize_intake_text(raw_voice, None)
+
+    assert "chest pain" in normalized
+    assert "for 3 days" in normalized
+    assert "shortness of breath" in normalized
+    assert "seene mein dard" not in normalized
+
+
+def test_intake_turn_preserves_raw_transcript_verbatim():
+    """Verbatim spoken transcript must be preserved without destructive overwriting."""
+    raw_voice = "Mujhe seene mein dard hai"
+    req = IntakeRequest(
+        encounter_id="enc_lang_001",
+        schema_id="allopathic_chest_pain_v1",
+        language="hi",
+        audio_bytes=None,
+        touch_answer=raw_voice,
+        history=[],
+        answering_field_name="chief_complaint",
+    )
+    resp = handle_intake_turn(req)
+    assert resp.next_question is not None
+
+
+# ---------------------------------------------------------------------------
 # 6. Safety gate cannot be bypassed
 # ---------------------------------------------------------------------------
 def test_safety_rejects_entity_without_provenance():

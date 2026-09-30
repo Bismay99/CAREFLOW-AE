@@ -826,3 +826,150 @@ def test_voice_turn_happy_path(client: TestClient):
     assert "chest pain" in entity["value"].lower()
     assert entity["source_type"] == "intake_session"
 
+
+def test_voice_turn_empty_audio_rejected_422(client: TestClient):
+    chain = _create_patient_chain(client, "vEmpty")
+    session_id = _start_session(client, chain)
+
+    r = client.post(
+        "/intake/turn/voice",
+        data={
+            "encounter_id": chain["encounter_id"],
+            "session_id": session_id,
+            "answering_field_name": "chief_complaint",
+            "language": "en",
+        },
+        files={"audio_file": ("empty.wav", b"", "audio/wav")},
+        headers=chain["headers"],
+    )
+    assert r.status_code == 422
+    assert "empty" in r.json()["detail"].lower()
+
+
+def test_voice_turn_oversized_audio_rejected_422(client: TestClient):
+    chain = _create_patient_chain(client, "vBig")
+    session_id = _start_session(client, chain)
+
+    huge_audio = b"0" * (10 * 1024 * 1024 + 1)
+    r = client.post(
+        "/intake/turn/voice",
+        data={
+            "encounter_id": chain["encounter_id"],
+            "session_id": session_id,
+            "answering_field_name": "chief_complaint",
+            "language": "en",
+        },
+        files={"audio_file": ("huge.wav", huge_audio, "audio/wav")},
+        headers=chain["headers"],
+    )
+    assert r.status_code == 422
+    assert "exceeds maximum" in r.json()["detail"].lower()
+
+
+def test_voice_turn_timing_header_present(client: TestClient):
+    chain = _create_patient_chain(client, "vTimer")
+    session_id = _start_session(client, chain)
+
+    sample_audio = b"RIFF....WAVEfmt " + b"\x00" * 64
+    r = client.post(
+        "/intake/turn/voice",
+        data={
+            "encounter_id": chain["encounter_id"],
+            "session_id": session_id,
+            "answering_field_name": "chief_complaint",
+            "language": "en",
+        },
+        files={"audio_file": ("sample.wav", sample_audio, "audio/wav")},
+        headers=chain["headers"],
+    )
+    assert r.status_code == 200
+    assert "x-voice-total-duration" in r.headers
+    assert r.headers["x-voice-total-duration"].endswith("s")
+
+
+def test_voice_turn_silence_handling(client: TestClient):
+    """
+    When audio contains no speech (transcribes to empty string):
+    - Should return raw_transcript as empty string
+    - Must NOT hallucinate entities
+    - Must NOT advance the question engine prematurely
+    """
+    from unittest.mock import patch
+    from ai_orchestration.services.asr import TranscriptionResult
+
+    chain = _create_patient_chain(client, "vSilent")
+    session_id = _start_session(client, chain)
+
+    silent_result = TranscriptionResult(text="", language="en")
+    sample_audio = b"RIFF....WAVEfmt " + b"\x00" * 64
+
+    with patch("ai_orchestration.brain.transcribe", return_value=silent_result):
+        r = client.post(
+            "/intake/turn/voice",
+            data={
+                "encounter_id": chain["encounter_id"],
+                "session_id": session_id,
+                "answering_field_name": "chief_complaint",
+                "language": "en",
+            },
+            files={"audio_file": ("silent.wav", sample_audio, "audio/wav")},
+            headers=chain["headers"],
+        )
+    assert r.status_code == 200
+    data = r.json()
+    assert data["raw_transcript"] == ""
+    assert data["entities_extracted"] == []
+    # Question should stay on the unanswered chief_complaint prompt
+    assert data["next_question_field_name"] == "chief_complaint"
+
+
+def test_voice_turn_rate_limit_maps_to_429(client: TestClient):
+    from unittest.mock import patch
+    from ai_orchestration.services.asr import AsrApiError
+
+    chain = _create_patient_chain(client, "vRateLimit")
+    session_id = _start_session(client, chain)
+
+    sample_audio = b"RIFF....WAVEfmt " + b"\x00" * 64
+
+    with patch("ai_orchestration.brain.transcribe", side_effect=AsrApiError("429 RESOURCE_EXHAUSTED")):
+        r = client.post(
+            "/intake/turn/voice",
+            data={
+                "encounter_id": chain["encounter_id"],
+                "session_id": session_id,
+                "answering_field_name": "chief_complaint",
+                "language": "en",
+            },
+            files={"audio_file": ("turn.wav", sample_audio, "audio/wav")},
+            headers=chain["headers"],
+        )
+    assert r.status_code == 429
+    assert "busy or rate limited" in r.json()["detail"].lower()
+
+
+def test_voice_turn_asr_service_unavailable_maps_to_503(client: TestClient):
+    from unittest.mock import patch
+    from ai_orchestration.services.asr import AsrApiError
+
+    chain = _create_patient_chain(client, "v503")
+    session_id = _start_session(client, chain)
+
+    sample_audio = b"RIFF....WAVEfmt " + b"\x00" * 64
+
+    with patch("ai_orchestration.brain.transcribe", side_effect=AsrApiError("503 Service Unavailable")):
+        r = client.post(
+            "/intake/turn/voice",
+            data={
+                "encounter_id": chain["encounter_id"],
+                "session_id": session_id,
+                "answering_field_name": "chief_complaint",
+                "language": "en",
+            },
+            files={"audio_file": ("turn.wav", sample_audio, "audio/wav")},
+            headers=chain["headers"],
+        )
+    assert r.status_code == 503
+    assert "temporarily unavailable" in r.json()["detail"].lower()
+
+

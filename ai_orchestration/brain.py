@@ -21,7 +21,11 @@ exclusively to the Core Backend (see backend/verification.py in the
 architecture doc).
 """
 
+import logging
+import time
 from typing import List
+
+logger = logging.getLogger(__name__)
 
 from .contracts import (
     IntakeRequest, IntakeResponse, IntakeTurn,
@@ -63,16 +67,22 @@ def handle_intake_turn(request: IntakeRequest) -> IntakeResponse:
     voice_text = None
     asr_confidence = None
     detected_language = None
+    is_voice = request.audio_bytes is not None and len(request.audio_bytes) > 0
 
-    if request.audio_bytes:
+    if is_voice:
+        t_asr = time.perf_counter()
         asr_result = transcribe(request.audio_bytes, request.language)
+        asr_dur = time.perf_counter() - t_asr
         voice_text = asr_result.text
         asr_confidence = asr_result.raw_confidence
         detected_language = asr_result.detected_language
+        logger.info("[VOICE] ASR: %.2fs", asr_dur)
 
-    # Voice and touch are combined, not one silently overwriting the other —
-    # e.g. patient says "haan, 3 din se" then confirms "Duration: 3 days".
+    t_norm = time.perf_counter()
     normalized_text = normalize_intake_text(voice_text, request.touch_answer)
+    norm_dur_ms = (time.perf_counter() - t_norm) * 1000.0
+    if is_voice:
+        logger.info("[VOICE] normalization: %.1fms", norm_dur_ms)
 
     schema = get_schema(request.schema_id)  # expected fields always come from the schema
 
@@ -80,6 +90,7 @@ def handle_intake_turn(request: IntakeRequest) -> IntakeResponse:
     draft_entities: List[ExtractedEntity] = []
     if normalized_text:
         try:
+            t_ext = time.perf_counter()
             draft_entities = extract_from_intake_turn(
                 intake_session_id=request.encounter_id,
                 turn_index=turn_index,
@@ -87,9 +98,11 @@ def handle_intake_turn(request: IntakeRequest) -> IntakeResponse:
                 expected_fields=schema.required_fields,
                 asr_confidence=asr_confidence,
             )
+            ext_dur = time.perf_counter() - t_ext
+            if is_voice:
+                logger.info("[VOICE] extraction: %.2fs", ext_dur)
         except Exception as exc:
-            import logging
-            logging.getLogger(__name__).warning("Extraction failed during intake turn: %s", exc)
+            logger.warning("Extraction failed during intake turn: %s", exc)
             draft_entities = []
 
     updated_history = request.history + [
@@ -102,8 +115,12 @@ def handle_intake_turn(request: IntakeRequest) -> IntakeResponse:
         )
     ] if normalized_text else request.history
 
+    t_qe = time.perf_counter()
     next_field = select_next_field(request.schema_id, updated_history)
     complete = next_field is None
+    qe_dur_ms = (time.perf_counter() - t_qe) * 1000.0
+    if is_voice:
+        logger.info("[VOICE] question engine: %.1fms", qe_dur_ms)
 
     return IntakeResponse(
         next_question=next_field.prompt if next_field else None,

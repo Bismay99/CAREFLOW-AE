@@ -21,13 +21,14 @@ Ownership chain enforced on every endpoint:
 
 import os
 import uuid
+import time
 import logging
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, BackgroundTasks, status
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, BackgroundTasks, Response, status
 from sqlalchemy.orm import Session
 
 # ── backend imports ──────────────────────────────────────────────────────────
@@ -74,6 +75,7 @@ from ai_orchestration.contracts import (
     SummaryRequest as BrainSummaryRequest,
 )
 from ai_orchestration.clinical_schema import get_schema
+from ai_orchestration.services.asr import AsrInvalidAudioError, AsrApiError
 
 router = APIRouter(prefix="/intake", tags=["intake"])
 
@@ -253,6 +255,7 @@ async def intake_turn_voice(
     touch_answer: Optional[str] = Form(None),
     language: Optional[str] = Form(None),
     audio_file: UploadFile = File(...),
+    response: Response = None,
     current_user: User = Depends(_require_patient),
     db: Session = Depends(get_db),
 ):
@@ -267,6 +270,7 @@ async def intake_turn_voice(
     Max audio size: 10MB
     Rejects empty audio with 422 Unprocessable Content.
     """
+    t_start = time.perf_counter()
     patient, encounter, session = resolve_patient_encounter_session(
         encounter_id, session_id, current_user, db
     )
@@ -286,6 +290,8 @@ async def intake_turn_voice(
             detail="Uploaded audio file exceeds maximum allowed size of 10MB.",
         )
 
+    logger.info("[VOICE] request start (size: %d bytes)", len(audio_bytes))
+
     # Reconstruct IntakeTurn history from answered_fields_json stored in session
     answered_fields: List[str] = session.answered_fields_json or []
     history = build_history_from_answered_fields(answered_fields, session.language)
@@ -302,7 +308,35 @@ async def intake_turn_voice(
     )
 
     # ── Call brain.py (in-process) ────────────────────────────────────────
-    brain_response = handle_intake_turn(brain_request)
+    try:
+        brain_response = handle_intake_turn(brain_request)
+    except AsrInvalidAudioError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid audio format: {exc}",
+        )
+    except AsrApiError as exc:
+        msg = str(exc)
+        if "429" in msg or "RESOURCE_EXHAUSTED" in msg:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Voice service is busy or rate limited. Please wait a moment and tap 'Retry'.",
+            )
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Voice transcription service temporarily unavailable. Please retry or type your answer.",
+        )
+    except TimeoutError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+            detail="Voice transcription timed out. Please retry.",
+        )
+    except Exception as exc:
+        logger.error("[VOICE] Unexpected error processing voice turn: %s", exc, exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred while processing voice intake. Please retry.",
+        )
 
     # ── Persist draft entities (strictly UNREVIEWED) ───────────────────────
     new_db_entities: List[DBEntity] = []
@@ -324,6 +358,11 @@ async def intake_turn_voice(
     session.turn_count = str(turn_count)
 
     db.flush()
+
+    t_total = time.perf_counter() - t_start
+    logger.info("[VOICE] total: %.2fs", t_total)
+    if response is not None:
+        response.headers["X-Voice-Total-Duration"] = f"{t_total:.2f}s"
 
     return IntakeTurnResponse(
         session_id=session.id,

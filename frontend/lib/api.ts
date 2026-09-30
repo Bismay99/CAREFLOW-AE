@@ -14,6 +14,19 @@ export class ApiError extends Error {
   }
 }
 
+export class ApiTimeoutError extends Error {
+  constructor(
+    public readonly timeoutMs: number,
+    message?: string,
+  ) {
+    super(
+      message ||
+        `Request timed out after ${Math.round(timeoutMs / 1000)}s. Please check your connection and retry.`
+    );
+    this.name = "ApiTimeoutError";
+  }
+}
+
 const TOKEN_KEY = "ps47_token";
 
 function getBaseUrl(): string {
@@ -128,7 +141,12 @@ export async function apiDelete<T>(path: string, tokenOverride?: string): Promis
   return handleResponse<T>(r, path);
 }
 
-export async function apiPostForm<T>(path: string, formData: FormData, tokenOverride?: string): Promise<T> {
+export async function apiPostForm<T>(
+  path: string,
+  formData: FormData,
+  tokenOverride?: string,
+  timeoutMs: number = 25000,
+): Promise<T> {
   const url = resolveUrl(path);
   const headers = buildHeaders(true, tokenOverride);
   const hasAuthorizationToken = typeof headers["Authorization"] === "string" && headers["Authorization"].length > 0;
@@ -155,20 +173,36 @@ export async function apiPostForm<T>(path: string, formData: FormData, tokenOver
     tokenLength,
     formDataFieldNames,
     audioBlob: audioFileInfo,
+    timeoutMs,
   });
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => {
+    controller.abort();
+  }, timeoutMs);
 
   try {
     const r = await fetch(url, {
       method: "POST",
       headers,
       body: formData,
+      signal: controller.signal,
     });
+    clearTimeout(timer);
     console.debug("[apiPostForm] Response received:", {
       status: r.status,
       statusText: r.statusText,
     });
     return handleResponse<T>(r, path);
-  } catch (err) {
+  } catch (err: unknown) {
+    clearTimeout(timer);
+    if (
+      controller.signal.aborted ||
+      (err instanceof Error && (err.name === "AbortError" || err.message?.includes("aborted")))
+    ) {
+      console.warn(`[apiPostForm] Request timed out after ${timeoutMs}ms:`, path);
+      throw new ApiTimeoutError(timeoutMs);
+    }
     console.debug("[apiPostForm] Fetch threw error:", err);
     throw err;
   }

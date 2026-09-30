@@ -36,10 +36,15 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
       const storedToken = hydrateFromStorage();
       if (storedToken) {
         try {
-          const user = await getMe();
+          const user = await Promise.race([
+            getMe(),
+            new Promise<never>((_, reject) =>
+              setTimeout(() => reject(new Error("Session check timeout")), 3500)
+            ),
+          ]);
           setAuth(storedToken, user);
         } catch {
-          // Token invalid or expired
+          // Token invalid, expired, or backend unreachable
           logout();
         }
       } else {
@@ -81,17 +86,22 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     }
   }, [hydrated, isInitializing, isAuthenticated, role, pathname, router]);
 
-  // Show secure loading state while checking session
+  const isPublic = PUBLIC_PATHS.includes(pathname);
+
+  // Show secure loading state only when on a protected route or when validating an existing token
   if (!hydrated || isInitializing) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[var(--bg-canvas)]">
-        <span className="text-[var(--clinical)] font-bold text-2xl mb-4 tracking-tight">CareFlow AI</span>
-        <div className="flex items-center gap-3 text-[var(--ink-500)]">
-          <Spinner className="text-[var(--clinical)]" />
-          <span className="text-sm font-medium">Checking your secure session…</span>
+    const hasStoredToken = typeof window !== "undefined" && Boolean(localStorage.getItem("ps47_token"));
+    if (!isPublic || hasStoredToken) {
+      return (
+        <div className="min-h-screen flex flex-col items-center justify-center bg-[var(--bg-canvas)]">
+          <span className="text-[var(--clinical)] font-bold text-2xl mb-4 tracking-tight">CareFlow AI</span>
+          <div className="flex items-center gap-3 text-[var(--ink-500)]">
+            <Spinner className="text-[var(--clinical)]" />
+            <span className="text-sm font-medium">Checking your secure session…</span>
+          </div>
         </div>
-      </div>
-    );
+      );
+    }
   }
 
   return <>{children}</>;

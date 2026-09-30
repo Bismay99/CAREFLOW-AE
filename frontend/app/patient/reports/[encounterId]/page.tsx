@@ -88,7 +88,7 @@ export default function PatientReportDetailPage() {
   const isAwaitingReview = report.queue_status === "ready_for_review";
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6 pb-12 print:max-w-none print:p-0">
+    <div className="max-w-3xl mx-auto space-y-3.5 pb-12 print:max-w-none print:p-0">
       {/* ── Top Navigation & Actions ── */}
       <div className="flex items-center justify-between gap-4 print:hidden">
         <Link
@@ -112,17 +112,17 @@ export default function PatientReportDetailPage() {
       {/* ── Formal Clinical Report Document ── */}
       <div className="bg-[var(--bg-surface)] rounded-lg border border-[var(--ink-200)] shadow-[var(--shadow-sm)] overflow-hidden print:border-none print:shadow-none">
         {/* Document Header */}
-        <div className="p-6 sm:p-8 border-b border-[var(--ink-200)] bg-[var(--bg-surface-2)]">
+        <div className="p-5 sm:p-6 border-b border-[var(--ink-200)] bg-[var(--bg-surface-2)]">
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
             <div>
               <div className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-[var(--clinical)] mb-1">
                 <Stethoscope className="w-3.5 h-3.5" />
                 <span>CareFlow AI Clinical Intake Platform</span>
               </div>
-              <h1 className="text-2xl font-bold text-[var(--ink-900)]">
+              <h1 className="text-xl sm:text-2xl font-bold text-[var(--ink-900)] tracking-tight">
                 Pre-Consultation Clinical Report
               </h1>
-              <p className="text-xs text-[var(--ink-500)] mt-1">
+              <p className="text-xs text-[var(--ink-500)] mt-0.5">
                 Department of {report.opd_department || "General OPD"} · Prepared for Physician Review
               </p>
             </div>
@@ -141,7 +141,7 @@ export default function PatientReportDetailPage() {
           </div>
 
           {/* Patient Metadata Grid */}
-          <div className="mt-6 pt-5 border-t border-[var(--ink-200)] grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
+          <div className="mt-4 pt-3.5 border-t border-[var(--ink-200)] grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
             <div>
               <span className="text-[var(--ink-500)] block mb-0.5">Patient Name</span>
               <span className="font-semibold text-[var(--ink-900)]">{report.patient_name}</span>
@@ -162,7 +162,7 @@ export default function PatientReportDetailPage() {
         </div>
 
         {/* Report Body */}
-        <div className="p-6 sm:p-8 space-y-8">
+        <div className="p-5 sm:p-6 space-y-7">
           {/* Status Alert Banner */}
           {isAwaitingReview ? (
             <div className="p-4 rounded-lg border border-[var(--status-pending-bd)] bg-[var(--status-pending-bg)] text-xs text-[var(--status-pending-fg)] flex items-start gap-3">

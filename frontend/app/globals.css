@@ -1,26 +1,28 @@
 @import "tailwindcss";
 
 /* ─────────────────────────────────────────────────────────────────────────
-   CareFlow AI Clinical Design System — Token Layer
+   CareFlow AI Premium Healthcare Design System — Token Layer
    Tailwind v4: no tailwind.config.ts. All custom tokens live here.
    ───────────────────────────────────────────────────────────────────────── */
 
 :root {
   /* ── Surfaces ─────────────────────────────────────────────────────────── */
-  --bg-canvas:    #F0F6FA;   /* clinical canvas — light blue-gray */
-  --bg-surface:   #FFFFFF;   /* pure white clinical surfaces */
-  --bg-surface-2: #F5F9FC;   /* subtle table row alt, inset card header */
-  --bg-inset:     #EBF3F7;   /* deeply nested section bg */
+  --bg-canvas:    #EDF7FC;   /* reference pale blue canvas */
+  --bg-surface:   #FFFFFF;   /* pure white surfaces */
+  --bg-surface-2: #F0F9FF;   /* subtle alt / header */
+  --bg-inset:     #E0F2FE;   /* inset highlight */
 
   /* ── Clinical Primary (deep surgical teal-blue) ──────────────────────── */
   --clinical:        #0D5C75;
-  --clinical-light:  #E8F4F9;
-  --clinical-mid:    #B8DAE8;
+  --clinical-light:  #E4F6FB;
+  --clinical-mid:    #B3DAEA;
   --clinical-dark:   #064B63;
   --clinical-hover:  #094B60;
   --clinical-accent: #0F8FA8;
+  --clinical-cyan:   #22D3EE;
+  --clinical-teal:   #0D9488;
 
-  /* ── Sidebar Tokens (Dark Institutional Teal) ────────────────────────── */
+  /* ── Sidebar Tokens ────────────────────────────────────────────────---- */
   --sidebar-bg:      #064B63;
   --sidebar-hover:   rgba(255, 255, 255, 0.08);
   --sidebar-active:  rgba(15, 143, 168, 0.28);
@@ -28,74 +30,82 @@
   --sidebar-fg:      #FFFFFF;
   --sidebar-muted:   #9FB3C8;
 
-  /* ── Ink / Neutral Text Scale (Clinical Deep Navy) ───────────────────── */
-  --ink-900: #102A43;   /* primary titles, critical labels */
-  --ink-800: #243B53;   /* primary body, clinical rows */
-  --ink-700: #334E68;   /* secondary labels */
-  --ink-500: #486581;   /* secondary text, muted explanations */
-  --ink-400: #829AB1;   /* metadata, timestamps, placeholders */
-  --ink-200: #D9E6EC;   /* thin blue-gray clinical borders */
-  --ink-100: #EBF4FA;   /* subtle clinical tint */
+  /* ── Ink / Neutral Text Scale ───────────────────────────────────────── */
+  --ink-900: #0C2133;
+  --ink-800: #1A3244;
+  --ink-700: #2D4A63;
+  --ink-600: #3D5A73;
+  --ink-500: #4E6B82;
+  --ink-400: #7A9AB5;
+  --ink-300: #A8C4D8;
+  --ink-200: #D0E6F0;
+  --ink-100: #EAF4FA;
 
-  /* ── Status — dual-channel (color + icon) ────────────────────────────── */
-  --status-success-fg:  #087F5B;
-  --status-success-bg:  #E6FCF5;
-  --status-success-bd:  #96F2D7;
+  /* ── Status Tokens ──────────────────────────────────────────────────── */
+  --status-success-fg:  #059669;
+  --status-success-bg:  #ECFDF5;
+  --status-success-bd:  #6EE7B7;
 
-  --status-pending-fg:  #B7791F;
-  --status-pending-bg:  #FEFCBF;
-  --status-pending-bd:  #F6E05E;
+  --status-pending-fg:  #D97706;
+  --status-pending-bg:  #FFFBEB;
+  --status-pending-bd:  #FCD34D;
 
-  --status-error-fg:    #C53030;
-  --status-error-bg:    #FFF5F5;
-  --status-error-bd:    #FEB2B2;
+  --status-error-fg:    #DC2626;
+  --status-error-bg:    #FEF2F2;
+  --status-error-bd:    #FECACA;
 
   --status-info-fg:     #0D5C75;
-  --status-info-bg:     #E8F4F9;
-  --status-info-bd:     #B8DAE8;
+  --status-info-bg:     #E4F6FB;
+  --status-info-bd:     #B3DAEA;
 
-  --status-neutral-fg:  #334E68;
-  --status-neutral-bg:  #F0F6FA;
-  --status-neutral-bd:  #D9E6EC;
+  --status-neutral-fg:  #2D4A63;
+  --status-neutral-bg:  #F3FAFD;
+  --status-neutral-bd:  #D0E6F0;
 
-  /* ── Entity Verification Semantic Tokens ─────────────────────────────── */
-  /* AI-Extracted: dashed sky border, light sky fill */
+  /* ── Entity Verification ─────────────────────────────────────────────── */
   --entity-ai-fg:  #0D5C75;
-  --entity-ai-bg:  #F0F8FB;
-  --entity-ai-bd:  #B8DAE8;
+  --entity-ai-bg:  #EEF8FC;
+  --entity-ai-bd:  #B3DAEA;
 
-  /* Doctor-Verified: solid emerald */
-  --entity-verified-fg: #087F5B;
-  --entity-verified-bg: #E6FCF5;
-  --entity-verified-bd: #63E6BE;
+  --entity-verified-fg: #059669;
+  --entity-verified-bg: #ECFDF5;
+  --entity-verified-bd: #6EE7B7;
 
-  /* Doctor-Edited: solid blue */
-  --entity-edited-fg: #102A43;
-  --entity-edited-bg: #EBF4FA;
-  --entity-edited-bd: #A5D8F3;
+  --entity-edited-fg: #0C2133;
+  --entity-edited-bg: #EAF4FA;
+  --entity-edited-bd: #93C5FD;
 
-  /* Doctor-Rejected: solid red */
-  --entity-rejected-fg: #C53030;
-  --entity-rejected-bg: #FFF5F5;
-  --entity-rejected-bd: #FEB2B2;
+  --entity-rejected-fg: #DC2626;
+  --entity-rejected-bg: #FEF2F2;
+  --entity-rejected-bd: #FECACA;
 
   /* ── Typography ──────────────────────────────────────────────────────── */
-  --font-sans: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto,
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     "Helvetica Neue", sans-serif;
-  --font-mono: "SF Mono", "Fira Code", "Fira Mono", "Roboto Mono", monospace;
+  --font-mono: "SF Mono", "Fira Code", "Roboto Mono", monospace;
 
-  /* ── Shadows ─────────────────────────────────────────────────────────── */
-  --shadow-xs: 0 1px 2px 0 rgb(16 42 67 / 0.04);
-  --shadow-sm: 0 1px 3px 0 rgb(16 42 67 / 0.06), 0 1px 2px -1px rgb(16 42 67 / 0.04);
-  --shadow-md: 0 4px 6px -1px rgb(16 42 67 / 0.07), 0 2px 4px -2px rgb(16 42 67 / 0.04);
+  /* ── Premium Shadows ─────────────────────────────────────────────────── */
+  --shadow-xs:   0 1px 3px 0 rgba(12, 33, 51, 0.06);
+  --shadow-sm:   0 2px 8px 0 rgba(12, 33, 51, 0.08), 0 1px 2px 0 rgba(12, 33, 51, 0.04);
+  --shadow-md:   0 4px 20px 0 rgba(12, 33, 51, 0.10), 0 2px 6px 0 rgba(12, 33, 51, 0.06);
+  --shadow-lg:   0 8px 32px 0 rgba(12, 33, 51, 0.12), 0 4px 12px 0 rgba(12, 33, 51, 0.08);
+  --shadow-card-hover: 0 12px 40px 0 rgba(12, 33, 51, 0.14), 0 4px 12px 0 rgba(15, 143, 168, 0.15);
+  --shadow-cyan-glow:  0 0 24px 0 rgba(34, 211, 238, 0.20), 0 4px 16px 0 rgba(13, 92, 117, 0.12);
+  --shadow-sidebar:    4px 0 20px 0 rgba(6, 75, 99, 0.25);
 
   /* ── Radii ───────────────────────────────────────────────────────────── */
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 8px;
-  --radius-xl: 10px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+  --radius-2xl: 24px;
 
-  /* ── Legacy aliases (kept for backward compat — do NOT use in new code) ─ */
+  /* ── Glassmorphism ───────────────────────────────────────────────────── */
+  --glass-bg:       rgba(255, 255, 255, 0.72);
+  --glass-border:   rgba(255, 255, 255, 0.50);
+  --glass-backdrop: blur(16px);
+
+  /* ── Legacy aliases ────────────────────────────────────────────────---- */
   --background:  var(--bg-canvas);
   --surface:     var(--bg-surface);
   --primary:     var(--clinical);
@@ -106,8 +116,7 @@
   --warning:     var(--status-pending-fg);
   --error:       var(--status-error-fg);
 
-  /* ── Sidebar — dark clinical institutional theme ──────────────────────── */
-  --sidebar-bg:      #064B63;   /* dark clinical teal */
+  --sidebar-bg:      #064B63;
   --sidebar-hover:   rgba(255,255,255,0.08);
   --sidebar-active:  rgba(15,143,168,0.28);
   --sidebar-border:  rgba(255,255,255,0.12);
@@ -115,9 +124,10 @@
   --sidebar-muted:   #9FB3C8;
 }
 
-/* ─── Base ──────────────────────────────────────────────────────────────── */
+
+/* ─── Base ───────────────────────────────────────────────────────────────── */
 body {
-  background: var(--bg-canvas);
+  background: #E5F4FA;
   color: var(--ink-800);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
@@ -130,8 +140,344 @@ code, kbd, pre, .font-mono {
 
 /* ─── Focus ring ─────────────────────────────────────────────────────────── */
 :focus-visible {
-  outline: 2px solid var(--clinical);
+  outline: 2px solid var(--clinical-accent);
   outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ─── Premium Animation Keyframes ───────────────────────────────────────── */
+
+/* Sidebar gradient shift */
+@keyframes sidebar-gradient-shift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* ECG / heartbeat line */
+@keyframes ecg-line {
+  0%   { stroke-dashoffset: 600; opacity: 0.15; }
+  30%  { opacity: 0.35; }
+  70%  { opacity: 0.35; }
+  100% { stroke-dashoffset: 0; opacity: 0.15; }
+}
+
+/* Floating medical cross */
+@keyframes float-cross {
+  0%   { transform: translateY(0px) rotate(0deg);   }
+  33%  { transform: translateY(-9px) rotate(3deg);  }
+  66%  { transform: translateY(5px) rotate(-2deg);  }
+  100% { transform: translateY(0px) rotate(0deg);   }
+}
+
+@keyframes float-cross-2 {
+  0%   { transform: translateY(0px) rotate(0deg);   }
+  40%  { transform: translateY(-7px) rotate(-4deg); }
+  70%  { transform: translateY(4px) rotate(2deg);   }
+  100% { transform: translateY(0px) rotate(0deg);   }
+}
+
+/* Active nav shimmer/sweep */
+@keyframes nav-shimmer {
+  0%   { transform: translateX(-100%); opacity: 0; }
+  40%  { opacity: 0.5; }
+  100% { transform: translateX(200%); opacity: 0; }
+}
+
+/* Subtle pulse for status indicator */
+@keyframes status-pulse {
+  0%, 100% { opacity: 1;    transform: scale(1); }
+  50%       { opacity: 0.65; transform: scale(0.9); }
+}
+
+/* Step glow for active progress step */
+@keyframes step-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(15, 143, 168, 0.35); }
+  50%       { box-shadow: 0 0 0 6px rgba(15, 143, 168, 0.12); }
+}
+
+/* Card entry */
+@keyframes card-enter {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Ping dot for LATEST badge */
+@keyframes ping-dot {
+  75%, 100% { transform: scale(1.6); opacity: 0; }
+}
+
+/* Background atmospheric wave drift */
+@keyframes bg-wave-drift {
+  0%   { transform: translateY(0px) scale(1); }
+  50%  { transform: translateY(-8px) scale(1.02); }
+  100% { transform: translateY(0px) scale(1); }
+}
+
+/* Ambient glow breathing */
+@keyframes bg-glow-breathe {
+  0%, 100% { opacity: 0.40; transform: scale(1); }
+  50%       { opacity: 0.65; transform: scale(1.06); }
+}
+
+/* Background heart float & pulse */
+@keyframes bg-heart-pulse {
+  0%, 100% { transform: scale(1) translateY(0px); filter: drop-shadow(0 0 12px rgba(34,211,238,0.30)); }
+  50%       { transform: scale(1.03) translateY(-4px); filter: drop-shadow(0 0 18px rgba(34,211,238,0.50)); }
+}
+
+/* Botanical leaf gentle sway */
+@keyframes bg-leaf-sway {
+  0%, 100% { transform: rotate(0deg) translateY(0px); }
+  50%       { transform: rotate(2deg) translateY(-5px); }
+}
+
+/* Slow draw ECG */
+@keyframes ecg-draw-slow {
+  0%   { stroke-dashoffset: 800; opacity: 0.20; }
+  40%  { opacity: 0.50; }
+  80%  { opacity: 0.50; }
+  100% { stroke-dashoffset: 0; opacity: 0.20; }
+}
+
+/* ── Sidebar Premium Animation Keyframes ─────────────────────────────────── */
+
+/* Radial glow blob drift 1 */
+@keyframes sb-blob-1 {
+  0%, 100% { transform: translate3d(0,0,0) scale(1);    opacity: 0.10; }
+  50%       { transform: translate3d(-11px,-17px,0) scale(1.07); opacity: 0.16; }
+}
+
+/* Radial glow blob drift 2 */
+@keyframes sb-blob-2 {
+  0%, 100% { transform: translate3d(0,0,0) scale(1);    opacity: 0.08; }
+  33%       { transform: translate3d(9px,-13px,0) scale(1.05);  opacity: 0.13; }
+  66%       { transform: translate3d(-7px,10px,0) scale(0.97); opacity: 0.09; }
+}
+
+/* Tiny particle float */
+@keyframes sb-dot-float {
+  0%, 100% { transform: translate3d(0,0,0);    opacity: 0.07; }
+  50%       { transform: translate3d(0,-8px,0); opacity: 0.14; }
+}
+
+/* Vertical ambient glow sweep down */
+@keyframes sb-glow-sweep {
+  0%   { top: -15%; opacity: 0.07; }
+  50%  { top: 55%;  opacity: 0.13; }
+  100% { top: 115%; opacity: 0.06; }
+}
+
+/* Faint wave line horizontal drift */
+@keyframes sb-wave-drift {
+  0%, 100% { transform: translateX(0) translateY(0);   opacity: 0.08; }
+  50%       { transform: translateX(6px) translateY(-4px); opacity: 0.14; }
+}
+
+/* Avatar breathing glow */
+@keyframes sb-avatar-breathe {
+  0%, 100% { box-shadow: 0 0 8px 2px rgba(34,211,238,0.22),
+                          0 0 0 0   rgba(34,211,238,0.00),
+                          0 2px 8px rgba(0,0,0,0.30); }
+  50%       { box-shadow: 0 0 14px 5px rgba(34,211,238,0.40),
+                          0 0 0 3px  rgba(34,211,238,0.12),
+                          0 2px 8px rgba(0,0,0,0.30); }
+}
+
+/* Heart double-beat pulse */
+@keyframes sb-heart-beat {
+  0%, 100% { transform: scale(1);    }
+  8%        { transform: scale(1.10); }
+  16%       { transform: scale(1.0);  }
+  24%       { transform: scale(1.07); }
+  32%       { transform: scale(1.0);  }
+}
+
+/* Logo initial soft glow (runs 3× then stops) */
+@keyframes sb-logo-init {
+  0%, 100% { box-shadow: 0 0 0   0   rgba(34,211,238,0.00); }
+  50%       { box-shadow: 0 0 14px 4px rgba(34,211,238,0.45); }
+}
+
+/* Ripple / pulse circle expand */
+@keyframes sb-ripple {
+  0%   { transform: scale(0.6); opacity: 0.30; }
+  100% { transform: scale(2.2); opacity: 0.00; }
+}
+
+/* ─── Sidebar CSS Micro-interaction Classes ──────────────────────────────── */
+
+/* Logo icon — init glow + hover */
+.sb-logo-icon {
+  transition: transform 250ms ease, box-shadow 250ms ease;
+  animation: sb-logo-init 1.8s ease-in-out 3;
+}
+.sb-logo-icon:hover {
+  transform: scale(1.03);
+  box-shadow: 0 0 14px 4px rgba(34,211,238,0.45);
+}
+
+/* Nav item — icon slide right on hover */
+.sb-nav-link .sb-nav-icon {
+  transition: transform 200ms ease;
+}
+.sb-nav-link:hover .sb-nav-icon {
+  transform: translateX(2px);
+}
+
+/* Nav item — text brightens on hover */
+.sb-nav-link .sb-nav-text {
+  transition: color 200ms ease, opacity 200ms ease;
+}
+.sb-nav-link:hover .sb-nav-text {
+  color: rgba(255,255,255,1.0) !important;
+}
+
+/* Nav item — subtle icon scale on active */
+.sb-nav-active .sb-nav-icon {
+  filter: drop-shadow(0 0 4px rgba(125,242,255,0.55));
+}
+
+/* Avatar breathing glow */
+.sb-avatar-glow {
+  animation: sb-avatar-breathe 3.5s ease-in-out infinite;
+}
+
+/* Heart beat pulse */
+.sb-heart-beat {
+  animation: sb-heart-beat 3.8s ease-in-out infinite;
+  transform-origin: center;
+}
+
+/* Reduced motion overrides */
+@media (prefers-reduced-motion: reduce) {
+  .sb-logo-icon,
+  .sb-avatar-glow,
+  .sb-heart-beat {
+    animation: none !important;
+  }
+  .sb-nav-link .sb-nav-icon,
+  .sb-nav-link .sb-nav-text {
+    transition: none;
+  }
+}
+
+/* ─── Premium Utility Classes ────────────────────────────────────────────── */
+
+/* Animated sidebar background */
+.sidebar-gradient {
+  background: linear-gradient(
+    160deg,
+    #043D53 0%,
+    #064B63 25%,
+    #085470 50%,
+    #0D7090 65%,
+    #064B63 80%,
+    #043D53 100%
+  );
+  background-size: 300% 300%;
+  animation: sidebar-gradient-shift 14s ease infinite;
+}
+
+/* Glass card */
+.glass-card {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-backdrop);
+  -webkit-backdrop-filter: var(--glass-backdrop);
+  border: 1px solid var(--glass-border);
+}
+
+/* Premium card with hover lift */
+.cf-card {
+  background: #FFFFFF;
+  border: 1px solid var(--ink-200);
+  border-radius: 16px;
+  box-shadow: var(--shadow-sm);
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+.cf-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card-hover);
+}
+
+/* Metric card accent */
+.metric-card {
+  background: #FFFFFF;
+  border: 1px solid var(--ink-200);
+  border-radius: 16px;
+  box-shadow: var(--shadow-sm);
+  transition: transform 200ms ease, box-shadow 200ms ease;
+}
+.metric-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-card-hover);
+}
+
+/* Active step glow */
+.step-active {
+  animation: step-glow 2.4s ease-in-out infinite;
+}
+
+/* Nav item hover slide */
+.nav-item-hover {
+  transition: transform 200ms ease, color 200ms ease, background 200ms ease;
+}
+.nav-item-hover:hover {
+  transform: translateX(2px);
+}
+
+/* Shimmer overlay (positioned relative to parent) */
+.nav-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+  animation: nav-shimmer 2.5s ease infinite;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+/* Status pulse dot */
+.pulse-dot {
+  animation: status-pulse 2s ease-in-out infinite;
+}
+
+/* Floating cross animation classes */
+.float-1 { animation: float-cross   18s ease-in-out infinite; }
+.float-2 { animation: float-cross-2 22s ease-in-out infinite; }
+.float-3 { animation: float-cross   26s ease-in-out 4s infinite; }
+.float-4 { animation: float-cross-2 20s ease-in-out 8s infinite; }
+
+/* Card staggered entrance */
+.card-enter   { animation: card-enter 0.45s cubic-bezier(0.22,1,0.36,1) both; }
+.card-enter-1 { animation: card-enter 0.45s cubic-bezier(0.22,1,0.36,1) 0.05s both; }
+.card-enter-2 { animation: card-enter 0.45s cubic-bezier(0.22,1,0.36,1) 0.10s both; }
+.card-enter-3 { animation: card-enter 0.45s cubic-bezier(0.22,1,0.36,1) 0.15s both; }
+.card-enter-4 { animation: card-enter 0.45s cubic-bezier(0.22,1,0.36,1) 0.20s both; }
+
+/* Scrollbar hide utility */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Strict responsive visibility rules */
+@media (min-width: 768px) {
+  .mobile-nav-only,
+  .mobile-header-only {
+    display: none !important;
+  }
+  .desktop-sidebar-only {
+    display: flex !important;
+  }
+}
+@media (max-width: 767px) {
+  .desktop-sidebar-only {
+    display: none !important;
+  }
 }
 
 /* ─── Clinical entity containers ─────────────────────────────────────────── */
@@ -341,7 +687,13 @@ code, kbd, pre, .font-mono {
   .animate-login-item-5,
   .animate-settle-up,
   .animate-settle-left,
-  .animate-settle-right {
+  .animate-settle-right,
+  .sidebar-gradient,
+  .float-1, .float-2, .float-3, .float-4,
+  .step-active,
+  .pulse-dot,
+  .nav-shimmer::after,
+  .card-enter, .card-enter-1, .card-enter-2, .card-enter-3, .card-enter-4 {
     animation: loginFadeIn 200ms ease-out both !important;
     transform: none !important;
   }

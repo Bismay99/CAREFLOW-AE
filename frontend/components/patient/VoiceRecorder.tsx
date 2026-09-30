@@ -1,6 +1,7 @@
 "use client";
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Mic, Square, Loader2, AlertCircle } from "lucide-react";
+import { Mic, Square, Loader2, AlertCircle, RotateCw } from "lucide-react";
+import type { VoiceLifecycleState } from "@/stores/intake.store";
 
 export interface VoiceRecorderProps {
   /**
@@ -12,8 +13,11 @@ export interface VoiceRecorderProps {
   onRecorded: (audioBlob: Blob, mimeType: string, extension: string) => void;
   disabled?: boolean;
   isUploading?: boolean;
+  voiceState?: VoiceLifecycleState;
   uploadError?: string | null;
   onClearError?: () => void;
+  onRetry?: () => void;
+  hasAudioToRetry?: boolean;
 }
 
 type RecorderState = "idle" | "recording" | "stopping";
@@ -60,8 +64,11 @@ export function VoiceRecorder({
   onRecorded,
   disabled = false,
   isUploading = false,
+  voiceState,
   uploadError = null,
   onClearError,
+  onRetry,
+  hasAudioToRetry = false,
 }: VoiceRecorderProps) {
   const [recorderState, setRecorderState] = useState<RecorderState>("idle");
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -219,6 +226,27 @@ export function VoiceRecorder({
   }
 
   const effectiveError = errorMessage || uploadError;
+  const isBusy =
+    isUploading ||
+    voiceState === "UPLOADING" ||
+    voiceState === "TRANSCRIBING" ||
+    voiceState === "PROCESSING" ||
+    voiceState === "RESPONDING";
+
+  function getStatusText(): string {
+    switch (voiceState) {
+      case "UPLOADING":
+        return "Sending audio...";
+      case "TRANSCRIBING":
+        return "Understanding your response...";
+      case "PROCESSING":
+        return "Preparing your next question...";
+      case "RESPONDING":
+        return "Updating intake...";
+      default:
+        return "Processing your answer...";
+    }
+  }
 
   return (
     <div className="w-full flex flex-col items-center">
@@ -226,7 +254,7 @@ export function VoiceRecorder({
       <div className="sr-only" aria-live="polite">
         {recorderState === "recording" && `Recording started. Time limit is ${MAX_RECORDING_SECONDS} seconds.`}
         {recorderState === "stopping" && "Recording stopped. Preparing audio."}
-        {isUploading && "Processing your answer with clinical voice intake."}
+        {isBusy && getStatusText()}
         {effectiveError && `Voice error: ${effectiveError}`}
       </div>
 
@@ -237,16 +265,16 @@ export function VoiceRecorder({
             type="button"
             onClick={stopRecording}
             aria-label="Stop voice recording"
-            className="h-12 px-6 rounded-xl bg-red-600 hover:bg-red-700 active:bg-red-800 text-white font-medium text-sm flex items-center justify-center gap-2.5 shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 min-w-[200px]"
+            className="h-12 px-6 rounded-xl bg-red-600 hover:bg-red-700 active:bg-red-800 text-white font-medium text-sm flex items-center justify-center gap-2.5 shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 min-w-[200px] cursor-pointer"
           >
             <span className="w-3 h-3 rounded-sm bg-white animate-pulse" />
             <Square className="w-4 h-4 fill-current" />
             <span>Tap to stop ({formatTimer(elapsedSeconds)})</span>
           </button>
-        ) : isUploading ? (
-          <div className="h-12 px-6 rounded-xl bg-[#F7F9FC] border border-[#E4E7EC] text-[#155EEF] font-medium text-sm flex items-center justify-center gap-2.5 min-w-[220px]">
+        ) : isBusy ? (
+          <div className="h-12 px-6 rounded-xl bg-[#F7F9FC] border border-[#E4E7EC] text-[#155EEF] font-medium text-sm flex items-center justify-center gap-2.5 min-w-[240px] shadow-xs">
             <Loader2 className="w-4 h-4 animate-spin text-[#155EEF]" />
-            <span>Processing your answer...</span>
+            <span className="transition-all duration-200">{getStatusText()}</span>
           </div>
         ) : (
           <button
@@ -254,7 +282,7 @@ export function VoiceRecorder({
             onClick={startRecording}
             disabled={disabled || !isSupported}
             aria-label="Start voice recording"
-            className="h-12 px-6 rounded-xl bg-white hover:bg-blue-50 active:bg-blue-100 border-2 border-[#155EEF] text-[#155EEF] font-semibold text-sm flex items-center justify-center gap-2.5 shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-[#155EEF] focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none min-w-[180px]"
+            className="h-12 px-6 rounded-xl bg-white hover:bg-blue-50 active:bg-blue-100 border-2 border-[#155EEF] text-[#155EEF] font-semibold text-sm flex items-center justify-center gap-2.5 shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-[#155EEF] focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none min-w-[180px] cursor-pointer"
           >
             <Mic className="w-5 h-5 text-[#155EEF]" />
             <span>Tap to speak</span>
@@ -262,8 +290,15 @@ export function VoiceRecorder({
         )}
       </div>
 
-      {/* Hint text */}
-      {recorderState === "idle" && !isUploading && isSupported && (
+      {/* Helper text during recording */}
+      {recorderState === "recording" && (
+        <p className="text-xs text-red-600 font-medium mt-2 text-center animate-pulse">
+          Listening... Speak clearly into your microphone.
+        </p>
+      )}
+
+      {/* Hint text when idle */}
+      {recorderState === "idle" && !isBusy && isSupported && (
         <p className="text-xs text-[#667085] mt-2 text-center">
           Speak in English, Hindi (हिंदी), or Hinglish. Maximum {MAX_RECORDING_SECONDS} seconds.
         </p>
@@ -276,19 +311,33 @@ export function VoiceRecorder({
         </p>
       )}
 
-      {/* Error display */}
+      {/* Error display with recoverable retry */}
       {effectiveError && (
-        <div className="mt-3 flex items-start gap-2 p-2.5 rounded-lg border border-red-200 bg-red-50 text-xs text-[#D92D20] max-w-md w-full">
-          <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-          <div className="flex-1">
-            <span>{effectiveError}</span>
+        <div className="mt-3 flex flex-col gap-2 p-3 rounded-lg border border-red-200 bg-red-50 text-xs text-[#D92D20] max-w-md w-full shadow-xs">
+          <div className="flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0 text-red-600" />
+            <div className="flex-1 font-medium leading-relaxed">
+              {effectiveError}
+            </div>
+          </div>
+          <div className="flex items-center gap-2 mt-1 justify-end">
+            {hasAudioToRetry && onRetry && (
+              <button
+                type="button"
+                onClick={onRetry}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-red-600 hover:bg-red-700 text-white font-medium text-xs shadow-xs transition-colors cursor-pointer"
+              >
+                <RotateCw className="w-3.5 h-3.5" />
+                <span>Retry Sending Audio</span>
+              </button>
+            )}
             <button
               type="button"
               onClick={() => {
                 setErrorMessage(null);
                 if (onClearError) onClearError();
               }}
-              className="ml-2 font-medium underline text-xs"
+              className="px-2.5 py-1.5 rounded-md border border-red-200 bg-white hover:bg-red-50 text-red-700 font-medium text-xs transition-colors cursor-pointer"
             >
               Dismiss
             </button>

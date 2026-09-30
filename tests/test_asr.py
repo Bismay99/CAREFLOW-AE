@@ -298,3 +298,52 @@ class TestMockedGeminiCall:
                 )
             assert mock_client.models.generate_content.call_count == 1
             mock_sleep.assert_not_called()
+
+    def test_transient_error_detector_distinguishes_transient_from_permanent(self):
+        from ai_orchestration.services.asr import _is_transient_asr_error
+
+        # Transient network / server cases
+        assert _is_transient_asr_error(ConnectionResetError("Connection reset by peer"))
+        assert _is_transient_asr_error(TimeoutError("Read timed out"))
+        assert _is_transient_asr_error(Exception("SSL: UNEXPECTED_EOF_WHILE_READING"))
+        assert _is_transient_asr_error(Exception("503 UNAVAILABLE"))
+        assert _is_transient_asr_error(Exception("429 RESOURCE_EXHAUSTED"))
+
+        # Permanent client cases
+        err_400 = Exception("400 Bad Request")
+        setattr(err_400, "status_code", 400)
+        assert not _is_transient_asr_error(err_400)
+
+        err_401 = Exception("401 Unauthorized")
+        setattr(err_401, "status_code", 401)
+        assert not _is_transient_asr_error(err_401)
+
+        err_422 = Exception("422 Unprocessable")
+        setattr(err_422, "status_code", 422)
+        assert not _is_transient_asr_error(err_422)
+
+        assert not _is_transient_asr_error(Exception("INVALID_ARGUMENT: Bad audio mime type"))
+        assert not _is_transient_asr_error(Exception("PERMISSION_DENIED: Key revoked"))
+
+    def test_retry_on_network_connection_reset_and_succeeds(self):
+        mock_client = MagicMock()
+        err_conn = ConnectionResetError("Connection reset by peer")
+
+        success_response = MagicMock()
+        success_response.candidates = []
+        success_response.text = "Recovered after network drop"
+
+        mock_client.models.generate_content.side_effect = [err_conn, success_response]
+
+        dummy_audio = b"RIFF....WAVE" + b"\x00" * 32
+        sleep_delays = []
+        with patch("time.sleep", side_effect=lambda d: sleep_delays.append(d)):
+            res = _call_gemini_asr(
+                client=mock_client,
+                model="gemini-3.5-transcribe",
+                audio_bytes=dummy_audio,
+                mime_type="audio/wav",
+            )
+        assert res.text == "Recovered after network drop"
+        assert mock_client.models.generate_content.call_count == 2
+        assert sleep_delays == [0.5]  # bounded first retry delay is exactly 0.5s

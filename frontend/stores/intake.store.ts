@@ -15,6 +15,15 @@ export interface ConversationEntry {
 
 type IntakePhase = "idle" | "starting" | "in_progress" | "submitting" | "submitted" | "error";
 
+export type VoiceLifecycleState =
+  | "IDLE"
+  | "RECORDING"
+  | "UPLOADING"
+  | "TRANSCRIBING"
+  | "PROCESSING"
+  | "RESPONDING"
+  | "ERROR";
+
 interface IntakeState {
   // Session identity
   encounterId: string | null;
@@ -41,6 +50,8 @@ interface IntakeState {
   // Voice transient state
   isVoiceRecording: boolean;
   isVoiceUploading: boolean;
+  voiceLifecycle: VoiceLifecycleState;
+  canRetryVoice: boolean;
   voiceError: string | null;
   lastTranscript: string | null;
   lastDetectedLanguage: string | null;
@@ -68,7 +79,9 @@ interface IntakeState {
   applySubmitResponse: (response: IntakeSubmitResponse) => void;
   setVoiceRecording: (recording: boolean) => void;
   setVoiceUploading: (uploading: boolean) => void;
+  setVoiceLifecycle: (state: VoiceLifecycleState) => void;
   setVoiceError: (error: string | null) => void;
+  setVoiceErrorWithRetry: (error: string | null, canRetry?: boolean) => void;
   clearLastTranscript: () => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
@@ -91,6 +104,8 @@ const initialState = {
   submitResult: null,
   isVoiceRecording: false,
   isVoiceUploading: false,
+  voiceLifecycle: "IDLE" as VoiceLifecycleState,
+  canRetryVoice: false,
   voiceError: null,
   lastTranscript: null,
   lastDetectedLanguage: null,
@@ -137,6 +152,8 @@ export const useIntakeStore = create<IntakeState>((set, get) => ({
       lastDetectedLanguage: r.detected_language || null,
       isLoading: false,
       isVoiceUploading: false,
+      voiceLifecycle: "IDLE",
+      canRetryVoice: false,
       error: null,
       voiceError: null,
       phase: "in_progress",
@@ -144,11 +161,51 @@ export const useIntakeStore = create<IntakeState>((set, get) => ({
   },
 
   applySubmitResponse: (result) =>
-    set({ submitResult: result, phase: "submitted", isLoading: false, isVoiceUploading: false, error: null }),
+    set({
+      submitResult: result,
+      phase: "submitted",
+      isLoading: false,
+      isVoiceUploading: false,
+      voiceLifecycle: "IDLE",
+      error: null,
+    }),
 
-  setVoiceRecording: (recording) => set({ isVoiceRecording: recording }),
-  setVoiceUploading: (uploading) => set({ isVoiceUploading: uploading }),
-  setVoiceError: (error) => set({ voiceError: error, isVoiceUploading: false }),
+  setVoiceRecording: (recording) =>
+    set({
+      isVoiceRecording: recording,
+      voiceLifecycle: recording ? "RECORDING" : "IDLE",
+    }),
+  setVoiceUploading: (uploading) =>
+    set({
+      isVoiceUploading: uploading,
+      voiceLifecycle: uploading ? "UPLOADING" : "IDLE",
+    }),
+  setVoiceLifecycle: (lifecycle) =>
+    set({
+      voiceLifecycle: lifecycle,
+      isVoiceRecording: lifecycle === "RECORDING",
+      isVoiceUploading:
+        lifecycle === "UPLOADING" ||
+        lifecycle === "TRANSCRIBING" ||
+        lifecycle === "PROCESSING" ||
+        lifecycle === "RESPONDING",
+    }),
+  setVoiceError: (error) =>
+    set({
+      voiceError: error,
+      voiceLifecycle: error ? "ERROR" : "IDLE",
+      isVoiceUploading: false,
+      isVoiceRecording: false,
+      canRetryVoice: false,
+    }),
+  setVoiceErrorWithRetry: (error, canRetry = true) =>
+    set({
+      voiceError: error,
+      voiceLifecycle: error ? "ERROR" : "IDLE",
+      isVoiceUploading: false,
+      isVoiceRecording: false,
+      canRetryVoice: !!error && canRetry,
+    }),
   clearLastTranscript: () => set({ lastTranscript: null, lastDetectedLanguage: null }),
 
   setLoading: (loading) => set({ isLoading: loading }),
